@@ -6,14 +6,22 @@
     <title>Document</title>
 </head>
 <body>
-    <div>
-        111
+    <div id="app">  文本
+        <p>{{ name }}</p>
+        <p>{{ age }}</p>
     </div>
-    <script src="dist/umd/vue.js"></script>
+    <script src="/dist/umd/vue.js"></script>
     <script>
         let vm = new Vue({
-            el: '#app'
+            el: '#app',
+            data() {
+                return {
+                    name: '烟花',
+                    age: 11
+                }
+            },
         })
+        vm._data.name = '11';
     </script>
 </body>
 </html>

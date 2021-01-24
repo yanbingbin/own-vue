@@ -3,7 +3,6 @@ import { arrayMethods } from './array';
 
 class Observer{
     constructor(value) {
-        console.log('value: ', value);
         def(value, '__ob__', this); // 给每一个被观测的对象添加__ob__属性，值是 this
         if (Array.isArray(value)) {
             // 通过__proto__修改数组的原型指向，使用重写方法拦截,数组不对索引观测，会导致性能问题

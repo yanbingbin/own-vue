@@ -6,17 +6,49 @@ const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s
 const startTagClose = /^\s*(\/?)>/; // 匹配标签结束的 >
 const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g;
 
-function start(tagName, attrs) {
-    console.log('开始标签: ', tagName);
+let root = null; // ast语法树的根节点
+let currentParent = null; // 当前节点的父亲节点
+let stack = [];
+const ELEMENT_TYPE = 1;
+const TEXT_TYPE = 3;
 
+function createASTElement(tagName, attrs) {
+    return {
+        tag: tagName,
+        type: ELEMENT_TYPE,
+        children: [],
+        attrs,
+        parent: null
+    };
+}
+
+function start(tagName, attrs) {
+    // 遇到开始标签，创建一个ast元素
+    let element = createASTElement(tagName, attrs);
+    if (!root) {
+        root = element;
+    }
+    currentParent = element; // 将当前元素标记为父ast树
+    stack.push(element); // 将开始标签放入栈中
 }
 
 function chars(text) {
-    console.log('文本是: ', text);
+    text = text.replace(/\s/g, '');
+    if (text) {
+        currentParent.children.push({
+            text,
+            type: TEXT_TYPE
+        });
+    }
 }
 
-function end(tagName) {
-
+function end() {
+    let element = stack.pop();
+    currentParent = stack[stack.length - 1];
+    if (currentParent) {
+        element.parent = currentParent; // 绑定父子关系
+        currentParent.children.push(element);
+    }
 }
 
 function parseHTML(html) {
@@ -26,14 +58,14 @@ function parseHTML(html) {
             // 如果当前索引为0，肯定是一个标签
             let startTagMatch = parseStartTag(); // 获取匹配结果 tagName attrs
             if (startTagMatch) {
-                start(startTagMatch.tagName, startTagMatch.attrs);
+                start(startTagMatch.tagName, startTagMatch.attrs); // 解析开始标签
                 continue; // 开始标签匹配完毕后，继续下一次匹配
             }
             // 匹配结束标签
             let endTagMatch = html.match(endTag);
             if (endTagMatch) {
                 advance(endTagMatch[0].length);
-                end(endTagMatch[1]);
+                end(); // 解析结束标签
                 continue;
             }
         }
@@ -43,7 +75,7 @@ function parseHTML(html) {
         }
         if (text) {
             advance(text.length);
-            chars(text);
+            chars(text); // 解析文本标签
         }
     }
 
@@ -74,12 +106,15 @@ function parseHTML(html) {
             }
         }
     }
+    return root;
 }
 
 // ast 语法树 用对象描述原生语法  
 // 虚拟dom 用对象描述dom节点
 export const compileToFunction = function (template) {
+    // 解析html字符串，生成ast语法树
     let root = parseHTML(template);
+    console.log('root: ', root);
     return function render() {
 
     };

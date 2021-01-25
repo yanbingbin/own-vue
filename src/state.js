@@ -1,5 +1,5 @@
 import { observe } from './observer/index';
-import { isObject } from './utils/index';
+import { isObject, proxy } from './utils/index';
 
 export const initState = function(vm) {
     const options = vm.$options;
@@ -24,11 +24,18 @@ export const initState = function(vm) {
 };
 function initProps() {}
 function initMethod() {}
+
+
 function initData(vm) {
     // 数据初始化
     let data = vm.$options.data; // 用户传递的data
     data = typeof data === 'function' ? data.call(vm) : data;
     vm._data = data;
+
+    // 取值代理，可以直接通过 vm.属性名取值
+    for (let key in data) {
+        proxy(vm, '_data', key);
+    }
 
     // 对象劫持 用户改变数据 通知视图刷新页面
     if (isObject(data)) {

@@ -11,3 +11,15 @@ export const def = function(data, key, value) {
         value
     });
 };
+
+// 代理数据
+export const proxy = function(vm, source, key) {
+    Object.defineProperty(vm, key, {
+        get() {
+            return vm[source][key];
+        },
+        set(newVal) {
+            vm[source][key] = newVal;
+        }
+    });
+};

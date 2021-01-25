@@ -1,5 +1,6 @@
 import { initState } from './state';
 import { compileToFunction } from './compiler/index';
+import { mountComponent } from './lifecycle';
 
 
 // 在原型上添加一个Init方法
@@ -19,7 +20,11 @@ export function initMixin(Vue) {
         }
 
     };
-
+    // vue模板渲染流程
+    // 1. 将 template 转化成 ast 语法树 { tag: 'div', type: 1, attrs: [{ name: 'id', value: 'app' }], parent: null, children: [{ tag: 'p', type: 1, attrs: [], parent: { ... 该对象 }, children: [{ text: '{{ name }}', type: 3 }]  }] }
+    // 2. 通过 ast 语法树生成 render 方法   function() { with(this){return _c('div', { id: "app",style: {"width":" 100px"," height":" 100px"} },_c('p', undefined,_v(_s(name))),_c('p', undefined,_v("{{age}}")))}}
+    // 3. 通过 render 方法生成虚拟 dom 
+    // 4. 通过虚拟 dom 生成 真实 dom
     Vue.prototype.$mount = function(el) {
         const vm = this;
         const options = vm.$options;
@@ -36,8 +41,8 @@ export function initMixin(Vue) {
             }
             const render = compileToFunction(template); // 将模板转成render
             options.render = render;
-            console.log('render: ', render);
         }
+        mountComponent(vm, el);
     };
 
 }

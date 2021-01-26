@@ -1,5 +1,6 @@
 import { isObject, def } from '../shared/utils';
 import { arrayMethods } from './array';
+import Dep from './dep';
 
 class Observer{
     constructor(value) {
@@ -28,17 +29,23 @@ class Observer{
 }
 
 function defineReactive(data, key, value) {
+    let dep = new Dep();
     observe(value); // 递归深度检测
     Object.defineProperty(data, key, {
         configurable: true,
         enumerable: true,
         get: function() {
+            // 收集依赖，每个属性都有自己的watcher
+            if (Dep.target) {
+                dep.depend(); // 双向依赖，让watcher保存dep，并且让dep 保存watcher
+            }
             return value;
         },
         set: function(newVal) {
             if (value === newVal) return;
             value = newVal;
             observe(value); // 赋值为对象，继续劫持
+            dep.notify(); // 通知依赖的 watcher 更新
         }
     });
 }

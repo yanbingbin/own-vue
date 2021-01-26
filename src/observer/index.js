@@ -1,4 +1,4 @@
-import { isObject, def } from '../utils/index';
+import { isObject, def } from '../shared/utils';
 import { arrayMethods } from './array';
 
 class Observer{
@@ -30,6 +30,8 @@ class Observer{
 function defineReactive(data, key, value) {
     observe(value); // 递归深度检测
     Object.defineProperty(data, key, {
+        configurable: true,
+        enumerable: true,
         get: function() {
             return value;
         },

@@ -3,7 +3,6 @@ import { patch } from './vdom/patch';
 
 export const lifecycleMixin = function(Vue) {
     Vue.prototype._update = function(vnode) {
-        console.log('vnode: ', vnode);
         const vm = this;
         vm.$el = patch(vm.$el, vnode); // 用虚拟 dom 创建真实 dom 替换 $el
     };
@@ -11,7 +10,7 @@ export const lifecycleMixin = function(Vue) {
 
 export const mountComponent = function(vm, el) {
     vm.$el = el; // 真实dom
-
+    callHook(vm, 'beforeMount');
     // 渲染页面
     let updateComponent = function() { // 渲染、更新都调用此方法
         // vm._render() 通过解析 render 方法，渲染出虚拟 dom
@@ -20,4 +19,14 @@ export const mountComponent = function(vm, el) {
     };
     // 渲染watcher 每个组件都有一个watcher
     new Watcher(vm, updateComponent, () => {}, true);
+    callHook(vm, 'mounted');
+};
+
+export const callHook = function(vm, hook) {
+    const handlers = vm.$options[hook];
+    if (handlers) {
+        for (let i = 0; i < handlers.length; i++) {
+            handlers[i].call(vm);
+        }
+    }
 };

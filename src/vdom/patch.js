@@ -11,9 +11,8 @@ export const patch = function(oldVnode, vnode) {
         let el = createElm(vnode);
         parentElm.insertBefore(el, oldElm.nextSibling);
         parentElm.removeChild(oldElm);
+        return el;
     }
-    console.log('oldVnode: ', oldVnode);
-    console.log('vnode: ', vnode);
     // 递归创建真实节点，替换老节点
 
 };
@@ -42,7 +41,7 @@ function updateProperties(vnode) {
     for (let key in newProps) { // 将属性挂载到真实节点上
         if (key === 'style') {
             for (let styleName in newProps.style) {
-                el.style[styleName] = newProps.style[styleName];
+                el.style[styleName.trim()] = newProps.style[styleName];
             } 
         } else if (key === 'class') {
             el.className = newProps.class;

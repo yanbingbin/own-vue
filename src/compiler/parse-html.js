@@ -96,7 +96,7 @@ export const parseHTML = function(html) {
                 advance(attr[0].length); // 将属性去除
                 match.attrs.push({ 
                     name: attr[1],
-                    value: attr[3] || attr[4] || attr[5] 
+                    value: attr[3]
                 });
             }
             if (end) { // 去掉开始标签的>

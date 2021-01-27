@@ -1,7 +1,7 @@
 // dep 和 watcher 多对多的关系
 // 一个 dep 可以存放多个 watcher 
 // 一个 watcher 也可以存放多个 dep
-
+import { queueWatcher } from './schedular';
 import { pushTarget, popTarget } from './dep';
 
 let id = 0;
@@ -25,7 +25,7 @@ class Watcher {
         popTarget(); 
     }
     update() {
-        queueWatcher(this);
+        queueWatcher(this); // 一次操作多次修改数据只触发一次视图更新
     }
     run() {
         this.get();
@@ -37,22 +37,6 @@ class Watcher {
             this.deps.push(dep);
             dep.addSub(this); // dep 存放 watcher
         }
-    }
-}
-
-let queue = [];
-let watcherIds = new Set();
-
-function queueWatcher(watcher) {
-    const id = watcher.id;
-    if (!watcherIds.has(id)) {
-        queue.push(watcher);
-        watcherIds.add(id);
-        setTimeout(() => {
-            queue.forEach(watcher => watcher.run());
-            queue = [];
-            watcherIds.clear();
-        }, 0);
     }
 }
 

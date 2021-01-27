@@ -23,7 +23,6 @@ methods.forEach(method => {
         const result = oldArrayMethods[method].apply(this, args); // 调用原生的方法
         let inserted; // 用户插入的数据，可能还是对象
         let ob = this.__ob__;
-        console.log('ob: ', ob); 
         switch (method) {
             case 'push':
             case 'unshift':

@@ -20,7 +20,6 @@ const methods = [
 
 methods.forEach(method => {
     arrayMethods[method] = function(...args) {
-        console.log('用户调用了', method);
         const result = oldArrayMethods[method].apply(this, args); // 调用原生的方法
         let inserted; // 用户插入的数据，可能还是对象
         let ob = this.__ob__;
@@ -39,6 +38,7 @@ methods.forEach(method => {
         if (inserted) { // 将新增属性继续观测
             ob.observerArray(inserted);
         }
+        ob.dep.notify(); // 触发更新
         return result;
     };
 });

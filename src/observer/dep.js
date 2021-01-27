@@ -5,7 +5,7 @@ class Dep {
         this.subs = [];
     }
     depend() {
-        Dep.target.addSub(this); // watcher 中存放 dep
+        Dep.target.addDep(this); // watcher 中存放 dep
     }
     notify() {
         this.subs.forEach(watcher => {

@@ -25,6 +25,9 @@ class Watcher {
         popTarget(); 
     }
     update() {
+        queueWatcher(this);
+    }
+    run() {
         this.get();
     }
     addDep(dep) {
@@ -34,6 +37,22 @@ class Watcher {
             this.deps.push(dep);
             dep.addSub(this); // dep 存放 watcher
         }
+    }
+}
+
+let queue = [];
+let watcherIds = new Set();
+
+function queueWatcher(watcher) {
+    const id = watcher.id;
+    if (!watcherIds.has(id)) {
+        queue.push(watcher);
+        watcherIds.add(id);
+        setTimeout(() => {
+            queue.forEach(watcher => watcher.run());
+            queue = [];
+            watcherIds.clear();
+        }, 0);
     }
 }
 

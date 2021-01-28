@@ -2,7 +2,6 @@ import { initState } from './state';
 import { compileToFunction } from './compiler/index';
 import { mountComponent, callHook } from './lifecycle';
 import { mergeOptions } from './shared/utils';
-import { nextTick } from './shared/next-tick';
 
 
 // 在原型上添加一个Init方法
@@ -48,6 +47,4 @@ export function initMixin(Vue) {
         }
         mountComponent(vm, el);
     };
-
-    Vue.prototype.$nextTick = nextTick;
 }

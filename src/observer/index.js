@@ -23,8 +23,7 @@ class Observer{
     walk(data) {
         let keys = Object.keys(data);
         keys.forEach(key => {
-            let value = data[key];
-            defineReactive(data, key, value); // 定义响应式数据
+            defineReactive(data, key, data[key]); // 定义响应式数据
         });
     }
 }

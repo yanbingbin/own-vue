@@ -7,9 +7,10 @@ export const isObject = function(data) {
 
 // 定义数据
 export const def = function(data, key, value) {
-    Object.defineProperty(data, key, { // 给每一个被观测的对象添加__ob__属性，值是 this
+    // 给每一个被观测的对象添加__ob__属性，值是 this，设置为不可枚举，不可遍历，遍历再次遍历 __ob__
+    Object.defineProperty(data, key, { 
         enumerable: false,
-        configurable: false,
+        configurable: false, 
         value
     });
 };
@@ -43,6 +44,18 @@ function mergeHook(parentVal, childVal) {
 LIFECYCLE_HOOKS.forEach(hook => {
     strats[hook] = mergeHook;
 });
+
+// 组件合并策略
+function mergeAssets(parentVal, childVal) {
+    const res = Object.create(parentVal);
+    if (childVal) {
+        for (let key in childVal) {
+            res[key] = childVal[key];
+        }
+    }
+    return res;
+}
+strats.components = mergeAssets;
 
 // 合并对象
 export const mergeOptions = function(parent, child) {

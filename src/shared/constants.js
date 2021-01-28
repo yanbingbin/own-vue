@@ -1,5 +1,3 @@
-
-
 export const LIFECYCLE_HOOKS = [
     'beforeCreate',
     'created',
@@ -13,5 +11,11 @@ export const LIFECYCLE_HOOKS = [
     'deactivated',
     'errorCaptured',
     'serverPrefetch'
-  ];
-  
+];
+
+
+export const ASSET_TYPES = [
+    'component',
+    'directive',
+    'filter'
+];

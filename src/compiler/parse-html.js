@@ -5,52 +5,58 @@ const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`); // 匹配标签结尾�
 const attribute = /^\s*([^\s"'<>\\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/; // 匹配属性的
 const startTagClose = /^\s*(\/?)>/; // 匹配标签结束的 >
 
-let root = null; // ast语法树的根节点
-let currentParent = null; // 当前节点的父亲节点
-let stack = [];
 const ELEMENT_TYPE = 1;
 const TEXT_TYPE = 3;
 
-function createASTElement(tagName, attrs) {
-    return {
-        tag: tagName,
-        type: ELEMENT_TYPE,
-        children: [],
-        attrs,
-        parent: null
-    };
-}
-
-function start(tagName, attrs) {
-    // 遇到开始标签，创建一个ast元素
-    let element = createASTElement(tagName, attrs);
-    if (!root) {
-        root = element;
-    }
-    currentParent = element; // 将当前元素标记为父ast树
-    stack.push(element); // 将开始标签放入栈中
-}
-
-function chars(text) {
-    text = text.replace(/\s/g, '');
-    if (text) {
-        currentParent.children.push({
-            text,
-            type: TEXT_TYPE
-        });
-    }
-}
-
-function end() {
-    let element = stack.pop();
-    currentParent = stack[stack.length - 1];
-    if (currentParent) {
-        element.parent = currentParent; // 绑定父子关系
-        currentParent.children.push(element);
-    }
-}
-
 export const parseHTML = function(html) {
+
+    let root = null; // ast语法树的根节点
+    let stack = [];
+
+    function createASTElement(tagName, attrs) {
+        return {
+            tag: tagName,
+            type: ELEMENT_TYPE,
+            children: [],
+            attrs,
+            parent: null
+        };
+    }
+
+    function start(tagName, attrs) {
+        // 遇到开始标签，创建一个ast元素
+        let element = createASTElement(tagName, attrs);
+        let parent = stack[stack.length - 1];
+        if (!root) {
+            root = element;
+        }
+        if (parent) {
+            element.parent = parent;
+            parent.children.push(element);
+        }
+        stack.push(element); // 将开始标签放入栈中
+    }
+
+    function chars(text) {
+        text = text.replace(/\s/g, '');
+        let parent = stack[stack.length - 1];
+        if (text) {
+            parent.children.push({
+                text,
+                type: TEXT_TYPE
+            });
+        }
+    }
+
+    function end() {
+        let element = stack.pop();
+        let parent = stack[stack.length - 1];
+        if (parent) {
+            element.parent = parent; // 绑定父子关系
+            parent.children.push(element);
+        }
+    }
+
     while (html) {
         let textEnd = html.indexOf('<');
         if (textEnd === 0) {

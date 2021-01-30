@@ -1,20 +1,24 @@
 
 
 export const patch = function(oldVnode, vnode) {
-    // 判断更新还是渲染
-    const isRealElement = oldVnode.nodeType;
-
-    if (isRealElement) {
-        const oldElm = oldVnode; // div id=app
-        const parentElm = oldElm.parentNode; // body
-
-        let el = createElm(vnode);
-        parentElm.insertBefore(el, oldElm.nextSibling);
-        parentElm.removeChild(oldElm);
-        return el;
+    if (!oldVnode) { // 可能是渲染组件
+        return createElm(vnode);
+    } else {
+        // 判断更新还是渲染
+        if (oldVnode.nodeType == 1) {
+            // 用vnode  来生成真实dom 替换原本的dom元素
+            const parentElm = oldVnode.parentNode; // 找到他的父亲
+            let elm = createElm(vnode); // 根据虚拟节点 创建元素
+    
+            // 在第一次渲染后 是删除掉节点，下次在使用无法获取
+            parentElm.insertBefore(elm, oldVnode.nextSibling);
+    
+            parentElm.removeChild(oldVnode);
+    
+    
+            return elm;
+        }
     }
-    // 递归创建真实节点，替换老节点
-
 };
 
 // 根据虚拟节点创建真实节点
@@ -22,6 +26,10 @@ function createElm(vnode) {
     let { tag, children, key, data, text } = vnode;
 
     if (typeof tag === 'string') { // 标签
+        if (createComponent(vnode)) { // 组件的话返回绑定的实例上的真实dom
+            return vnode.componentInstance.$el;
+        }
+
         vnode.el = document.createElement(tag);
         updateProperties(vnode);
         children.forEach(child => { 
@@ -32,6 +40,16 @@ function createElm(vnode) {
         vnode.el = document.createTextNode(text);
     }
     return vnode.el;
+}
+
+function createComponent(vnode) {
+    let i = vnode.data;
+    if ((i = i.hook) && (i = i.init)) {
+        i(vnode); // 执行组件的init方法
+    }
+    if (vnode.componentInstance) {
+        return true;
+    }
 }
 
 // 更新属性

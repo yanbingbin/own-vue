@@ -53,7 +53,6 @@ export const parseHTML = function(html) {
         let parent = stack[stack.length - 1];
         if (parent) {
             element.parent = parent; // 绑定父子关系
-            parent.children.push(element);
         }
     }
 

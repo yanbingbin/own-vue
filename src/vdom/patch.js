@@ -45,33 +45,90 @@ function sameVnode(oldVnode, newVnode) { // 如果tag相同且key相同，则认
     return (oldVnode.tag === newVnode.tag) && (oldVnode.key === newVnode.key);
 }
 
+function createKeyToOldIndex(children, beginIndex, endIndex) {
+    const map = {};
+    for (let i = beginIndex; i <= endIndex; ++i) {
+        let key = children[i].key;
+        if (key) {
+            map[key] = i;
+        }
+    }
+    return map;
+}
+
 // vue2采用双指针，头尾缩进比对
-function updateChildren(parent, oldChildren, newChildren) {
-    let oldStartIndex = 0;
-    let oldStartVnode = oldChildren[0];
-    let oldEndIndex = oldChildren.length - 1;
-    let oldEndVnode = oldChildren[oldEndIndex];
+function updateChildren(parentElm, oldChildren, newChildren) {
+    let oldStartIndex = 0; // 老节点头指针
+    let oldStartVnode = oldChildren[0]; // 头指针对应的虚拟节点
+    let oldEndIndex = oldChildren.length - 1; // 老节点尾指针
+    let oldEndVnode = oldChildren[oldEndIndex]; // 尾指针对应虚拟节点
 
     let newStartIndex = 0;
     let newStartVnode = newChildren[0];
     let newEndIndex = newChildren.length - 1;
     let newEndVnode = newChildren[newEndIndex];
 
+    let oldKeyToIndex; // 老节点的key所在的索引map 
+    let indexInOld; // 当前移动节点在老节点的索引
+    let vnodeToMove; // 当前要移动的节点
+
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
-        if (sameVnode(oldStartVnode, newStartVnode)) { // 优化向后添加子节点
+        if (!oldStartVnode) { // 乱序元素被移动导致的undefined需要跳过
+            oldStartVnode = oldChildren[++oldStartIndex];
+        } else if (!oldEndVnode) { // 乱序元素被移动导致的undefined需要跳过
+            oldEndVnode = oldChildren[--oldEndIndex];
+        } else if (sameVnode(oldStartVnode, newStartVnode)) { // 在尾部添加子节点，头指针后移
             patch(oldStartVnode, newStartVnode); // 复用真实DOM
             oldStartVnode = oldChildren[++oldStartIndex];
             newStartVnode = newChildren[++newStartIndex];
-        } else if (sameVnode(oldEndVnode, newEndVnode)) {
+        } else if (sameVnode(oldEndVnode, newEndVnode)) { // 在头部添加子节点，尾指针前移
             patch(oldEndVnode, newEndVnode);
-            oldEndVnode = oldChildren[--oldEndIndex];
+            oldEndVnode = oldChildren[--oldEndIndex]; 
             newEndVnode = newChildren[--newEndIndex];
+        } else if (sameVnode(oldStartVnode, newEndVnode)) { // 头节点移动到尾部
+            patch(oldStartVnode, newEndVnode);
+            parentElm.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling); // insertBefore会将原来的元素移走
+            oldStartVnode = oldChildren[++oldStartIndex];
+            newEndVnode = newChildren[--newEndIndex];
+        } else if (sameVnode(oldEndVnode, newStartVnode)) { // 尾节点移动到头部
+            patch(oldEndVnode, newStartVnode);
+            parentElm.insertBefore(oldEndVnode.el, oldStartVnode.el);
+            oldEndVnode = oldChildren[--oldEndIndex];
+            newStartVnode = newChildren[++newStartIndex];   
+        } else { // 头与头、尾与尾，交叉头尾都不相同
+            if (!oldKeyToIndex) { // 创建老节点的key对应索引的map表
+                oldKeyToIndex = createKeyToOldIndex(oldChildren, oldStartIdx, oldEndIndex); 
+            }
+            indexInOld = oldKeyToIndex(newStartVnode.key); // 找到新节点在老节点的索引位置，利用key对比
+            if (!indexInOld) { // 找不到说明是新元素,在当前老的开始节点前直接插入
+                parentElm.insertBefore(createElm(newStartVnode), oldStartVnode.el);
+            } else { // 找到了
+                vnodeToMove = oldChildren[indexInOld]; // 拿到要移动的节点
+                oldChildren[indexInOld] = undefined; // 将移动的节点的位置置为undefined，之后碰到就跳过位置
+                patch(vnodeToMove, newStartVnode); // 还要对比子节点
+                parentElm.insertBefore(vnodeToMove.el, oldStartVnode.el); // 将找到的节点插入到当前老的开始节点前
+            }
+            newStartVnode = newChildren[++newStartIndex];
         }
     }
 
-    if (newStartIndex <= newEndIndex) { // 将新添加的子节点插入
+    if (newStartIndex <= newEndIndex) { // 新的children指针头指针小于等于尾指针，说明有新的元素加入
         for (let i = newStartIndex; i <= newEndIndex; i++) {
-            parent.appendChild(createElm(newChildren[i]));
+            const nextEl = newChildren[newEndIndex + 1] == null ? null : newChildren[newEndIndex + 1].el;
+            // if (nextEl === null) { // 在末尾插入的元素
+            //     parentElm.insertBefore(createElm(newChildren[i]), null);
+            // } else { // 在开头插入元素
+            //     parentElm.insertBefore(createElm(newChildren[i]), nextEl);
+            // }
+            parentElm.insertBefore(createElm(newChildren[i]), nextEl); // nextEl 是要在哪个元素前面插入, 为末尾时， null 在末尾插入，否则在尾指针的元素前面插入
+        }
+    }
+    if (oldStartIndex <= oldEndIndex) { // 老children的头指针小于尾指针，说明有元素有剩余，需要删除
+        for (let i = oldStartVnode; i <= oldEndIndex; i++) {
+            let child = oldChildren[i];
+            if (child) {
+                parent.removeChild(child.el);
+            }
         }
     }
 }

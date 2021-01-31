@@ -4,7 +4,13 @@ import { patch } from './vdom/patch';
 export const lifecycleMixin = function(Vue) {
     Vue.prototype._update = function(vnode) {
         const vm = this;
-        vm.$el = patch(vm.$el, vnode); // 用虚拟 dom 创建真实 dom 替换 $el
+        const prevVnode = vm._vnode; // 获取上次的vnode
+        vm._vnode = vnode; // 保留这次的vnode
+        if (!prevVnode) { // 第一次渲染没有上次的vnode，不进行diff
+            vm.$el = patch(vm.$el, vnode); // 用虚拟 dom 创建真实 dom 替换 $el
+        } else {
+            vm.$el = patch(prevVnode, vnode); // 通过上次的虚拟dom和这次的虚拟dom对比更新
+        }
     };
 };
 

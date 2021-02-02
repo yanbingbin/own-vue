@@ -38,7 +38,7 @@ function defineReactive(data, key, value) {
             // 收集依赖，每个属性都有自己的watcher
             if (Dep.target) {
                 dep.depend(); // 双向依赖，让watcher保存dep，并且让dep 保存watcher
-                if (childOb) { // 为了收集数组的依赖
+                if (childOb) { // 为了收集对象中的对象的依赖
                     childOb.dep.depend(); // 重复依赖会自动去掉 Set
                     if (Array.isArray) { // 数组内部还是数组,需要递归收集数组依赖
                         dependArray(value);

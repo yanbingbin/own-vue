@@ -17,7 +17,7 @@ function addRouteRecord(route, pathList, pathMap, parent) {
     let record = { // 根据当前路由产生一个记录
         path,
         component: route.component,
-        parent
+        parent // 之后createRoute需要通过这个不断递归找父亲拿到对应的record
     };
     if (!pathMap[path]) { // 避免重复路由覆盖
         pathList.push(path);

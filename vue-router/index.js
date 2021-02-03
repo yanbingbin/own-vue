@@ -36,6 +36,10 @@ class VueRouter{
         });
     }
 
+    push(location) {
+        window.location.hash = location;
+    }
+
     match(location) {
         return this.matcher.match(location);
     }

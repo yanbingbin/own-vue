@@ -10,7 +10,7 @@ export default install = function(Vue) {
 
     Vue.mixin({
         beforeCreate() {
-            if (this.$options.router) { // 如果有router属性说明是根实例
+            if (this.$options.router) { // 如果有router属性说明是根实例,这里的router是new Vue传入的new Router()生成的router的实例
                 this._routerRoot = this; // 将根实例挂载在_routerRoot属性上
                 this._router = this.$options.router; // 将当前router实例挂载在_router上
                 this._router.init(this); // 初始化路由,这里的this指向的是根实例
@@ -24,6 +24,14 @@ export default install = function(Vue) {
                 
             }
         }
+    });
+
+    Object.defineProperty(Vue.prototype, '$router', {
+        get() { return this._routerRoot._router; } // router的实例
+    });
+
+    Object.defineProperty(Vue.prototype, '$route', {
+        get() { return this._routerRoot._route; } // Vue.util.defineReactive(this, '_route', 设置的current
     });
 
     Vue.component('RouterView', View);

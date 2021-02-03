@@ -10,6 +10,7 @@ class VueRouter{
         // addRoutes: 动态添加路由
         this.matcher = createMatcher(options.routes || []); 
         this.mode = options.mode || 'hash';
+        this.beforeEachHooks = [];
 
         switch (mode) {
             case 'history':
@@ -38,6 +39,10 @@ class VueRouter{
 
     push(location) {
         window.location.hash = location;
+    }
+
+    beforeEach(fn) {
+        this.beforeEachHooks.push(fn);
     }
 
     match(location) {

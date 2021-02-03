@@ -14,8 +14,16 @@ export class History {
         if (location === route.path && route.matched.length === this.current.matched.length) { // 相同的路径不过渡
             return;
         }
-        this.updateRoute(route); // 更新当前的记录
-        onComplete && onComplete();
+        const queue = this.router.beforeHooks;
+        const iterator = (hook, next) => {
+            hook(route, this.current, () => { // from to next
+                next();
+            });
+        };
+        runQueue(queue, iterator, () => { // 路径变化，执行钩子函数
+            this.updateRoute(route); // 更新当前的记录
+            onComplete && onComplete();
+        });
     }
     updateRoute(route) {
         this.current = route;
@@ -38,4 +46,18 @@ export function createRoute(record, location) {
         ...location,
         matched
     };
+}
+
+function runQueue(queue, iterator, cb) {
+    function next(index) {
+        if (index >= queue.length) {
+            cb();
+        } else {
+            const hook = queue[index];
+            iterator(hook, () => {
+                next(index + 1);
+            });
+        }
+    }
+    next(0);
 }

@@ -31,6 +31,9 @@ class VueRouter{
             history.getCurrentLocation(), // 子类实现不同的获取路径的方法
             setupListeners
         );
+        history.listen((route) => {
+            app._route = route; // 修改的是 vue 实例的，这样才能触发视图更新
+        });
     }
 
     match(location) {

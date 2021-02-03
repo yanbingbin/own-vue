@@ -6,6 +6,7 @@ export class History {
         this.current = createRoute(null, {
             path: '/'
         }); // { path: '/', matched: [] }
+        this.cb = null;
     }
     transitionTo(location, onComplete) {
         // 获取当前路径匹配对应的记录，当路径变化时获取对应的记录，根据记录里面的组件渲染页面
@@ -18,6 +19,10 @@ export class History {
     }
     updateRoute(route) {
         this.current = route;
+        this.cb && this.cb(route); // 更新current后 更新_route属性 触发视图更新
+    }
+    listen(cb) {
+        this.cb = cb; // 注册函数
     }
 }
 

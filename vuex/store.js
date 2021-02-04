@@ -1,5 +1,6 @@
 import applyMixin from './mixin';
 import { forEachValue } from './utils';
+import ModuleCollection from './module/module-collection';
 
 export class Store {
     constructor(options) {
@@ -16,7 +17,7 @@ export class Store {
                 get: () => this._vm[key] // 取的是computed的属性
             });
         });
-        forEachValue(options.mutations, (fn, type) => {
+        forEachValue(options.mutations, (fn, type) => { // 发布订阅模式
             this._mutations[type] = (payload) => fn.call(this, this.state, payload);
         });
         forEachValue(options.actions, (fn, type) => {

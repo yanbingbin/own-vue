@@ -5,6 +5,9 @@ export default class Module {
         this._children = {};
         this.state = rawModule.state;
     }
+    get namespaced () { // 属性访问器
+        return !!this._rawModule.namespaced;
+    }
     getChild(key) {
         return this._children[key];
     }

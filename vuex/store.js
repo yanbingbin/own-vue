@@ -27,26 +27,30 @@ export class Store {
 }
 
 function installModule(store, rootState, path, module) {
+    const namespace = store._modules.getNamespace(path); 
     if (path.length > 0) { // 子模块，将子模块的状态定义到根模块
         const parent = path.slice(0, -1).reduce((module, current) => {
             return module[current];
         }, rootState);
         Vue.set(parent, path[path.length - 1], module.state);
     }
-    module.forEachMutation((mutation, type) => {
-        store._mutations[type] = store._mutations[type] || [];
-        store._mutations[type].push((payload) => {
+    module.forEachMutation((mutation, key) => { 
+        const namespacedType = namespace + key; // 增加命名空间 /name/mutationName
+        store._mutations[namespacedType] = store._mutations[namespacedType] || [];
+        store._mutations[namespacedType].push((payload) => {
             mutation.call(store, module.state, payload);
         });
     });
-    module.forEachAction((action, type) => {
-        store._actions[type] = store._actions[type] || [];
-        store._actions[type].push((payload) => {
+    module.forEachAction((action, key) => {
+        const namespacedType = namespace + key;
+        store._actions[namespacedType] = store._actions[namespacedType] || [];
+        store._actions[namespacedType].push((payload) => {
             action.call(store, store, payload);
         });
     });
     module.forEachGetters((getter, key) => {
-        store._wrappedGetters[key] = function() { // 同名getter会覆盖
+        const namespacedType = namespace + key;
+        store._wrappedGetters[namespacedType] = function() { // 同名getter会覆盖
             return getter(module.state);
         };
     });

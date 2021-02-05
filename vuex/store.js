@@ -4,43 +4,75 @@ import ModuleCollection from './module/module-collection';
 
 export class Store {
     constructor(options) {
-        let state = options.state;
-        this.getters = {};
-        this._mutations = {};
         this._actions = {};
-        const computed = {};
-        forEachValue(options.getters, (fn, key) => {
-            computed[key] = () => { // 将属性放到computed里面
-                return fn(this.state);
-            };
-            Object.defineProperty(this.getters, key, {
-                get: () => this._vm[key] // 取的是computed的属性
-            });
-        });
-        forEachValue(options.mutations, (fn, type) => { // 发布订阅模式
-            this._mutations[type] = (payload) => fn.call(this, this.state, payload);
-        });
-        forEachValue(options.actions, (fn, type) => {
-            this._actions[type] = (payload) => fn.call(this, this.state, payload);
-        });
-        this._vm = new Vue({ // 利用 new Vue对state收集依赖，state发生改变时视图更新
-            data: { // $$ 代表内部属性，不会被代理到实例上
-                $$state: state
-            },
-            computed // 利用计算属性实现缓存
-        });
+        this._mutations = {};
+        this._wrappedGetters = {};
+        this._modules = new ModuleCollection(options);
+        const state = this._modules.root.state; // 根的状态
+        installModule(this, state, [], this._modules.root); // 安装模块
+
+        resetStoreVm(this, state);
     }
     commit = (type, payload) => { 
-        this._mutations[type](payload);
+        this._mutations[type].forEach(fn => fn.call(this, payload));
     }
     dispatch = (type, payload) => {
-        this._actions[type](payload);
+        this._actions[type].forEach(fn => fn.call(this, payload));
     }
     // 类的属性访问器，当用户去这个实例上取state属性时，会执行这个方法
     get state() {
         return this._vm._data.$$state;
     }
 
+}
+
+function installModule(store, rootState, path, module) {
+    if (path.length > 0) { // 子模块，将子模块的状态定义到根模块
+        const parent = path.slice(0, -1).reduce((module, current) => {
+            return module[current];
+        }, rootState);
+        Vue.set(parent, path[path.length - 1], module.state);
+    }
+    module.forEachMutation((mutation, type) => {
+        store._mutations[type] = store._mutations[type] || [];
+        store._mutations[type].push((payload) => {
+            mutation.call(store, module.state, payload);
+        });
+    });
+    module.forEachAction((action, type) => {
+        store._actions[type] = store._actions[type] || [];
+        store._actions[type].push((payload) => {
+            action.call(store, store, payload);
+        });
+    });
+    module.forEachGetters((getter, key) => {
+        store._wrappedGetters[key] = function() { // 同名getter会覆盖
+            return getter(module.state);
+        };
+    });
+    module.forEachChild((child, key) => {
+        installModule(store, rootState, path.concat(key), child);
+    });
+}
+
+function resetStoreVm(store, state) {
+    const computed = {};
+    store.getters = {};
+    const wrappedGetters = store._wrappedGetters;
+    forEachValue(wrappedGetters, (fn, key) => { // 发布订阅模式
+        computed[key] = () => { // 将用户定义的放到computed里面
+            return fn(store.state);
+        };
+        Object.defineProperty(store.getters, key, { // 代理属性，vue中取值其实取的是计算属性
+            get: () => store._vm[key]
+        });
+    });
+    store._vm = new Vue({ // 利用 new Vue对state收集依赖，state发生改变时视图更新
+        data: {
+            $$state: state // $$ 代表内部属性，不会被代理到实例上
+        },
+        computed // 利用计算属性实现缓存
+    });
 }
 
 let Vue;

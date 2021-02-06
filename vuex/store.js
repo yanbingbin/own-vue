@@ -7,11 +7,18 @@ export class Store {
         this._actions = {};
         this._mutations = {};
         this._wrappedGetters = {};
-        this._modules = new ModuleCollection(options);
+        this._subscribers = [];
+        this._modules = new ModuleCollection(options); // 收集模块转成树形结构
         const state = this._modules.root.state; // 根的状态
         installModule(this, state, [], this._modules.root); // 安装模块
-
-        resetStoreVm(this, state);
+        resetStoreVM(this, state); // 将状态放到vue实例
+        options.plugins.forEach(plugin => plugin(this)); // 执行插件
+    }
+    subscribe(fn) { // 订阅
+        this._subscribers.push(fn);
+    }
+    replaceState(state) { // 用最新的状态进行替换，例如持久化插件，可用本地local的state使用该方法更新state,处理刷新state丢失
+        this._vm._data.$$state = state;
     }
     commit = (type, payload) => { 
         this._mutations[type].forEach(fn => fn.call(this, payload));
@@ -23,7 +30,12 @@ export class Store {
     get state() {
         return this._vm._data.$$state;
     }
-
+    registerModule(path, rawModule) {
+        if (typeof path == 'string') path = [path];
+        this._modules.register(path, rawModule); // 模块注册
+        installModule(this, this.state, path, this._modules.get(path)); // 安装模块，动态新增状态
+        resetStoreVM(this, this.state); // 重新定义getters
+    }
 }
 
 function installModule(store, rootState, path, module) {
@@ -37,8 +49,9 @@ function installModule(store, rootState, path, module) {
     module.forEachMutation((mutation, key) => { 
         const namespacedType = namespace + key; // 增加命名空间 /name/mutationName
         store._mutations[namespacedType] = store._mutations[namespacedType] || [];
-        store._mutations[namespacedType].push((payload) => {
-            mutation.call(store, module.state, payload);
+        store._mutations[namespacedType].push((payload) => { 
+            mutation.call(store, getState(store, path), payload); // 更改状态
+            store._subscribers.forEach(sub => sub({ mutation, type }, store, state)); // 调用订阅事件
         });
     });
     module.forEachAction((action, key) => {
@@ -51,15 +64,16 @@ function installModule(store, rootState, path, module) {
     module.forEachGetters((getter, key) => {
         const namespacedType = namespace + key;
         store._wrappedGetters[namespacedType] = function() { // 同名getter会覆盖
-            return getter(module.state);
+            return getter(getState(store, path));
         };
     });
-    module.forEachChild((child, key) => {
-        installModule(store, rootState, path.concat(key), child);
+    module.forEachChild((child, key) => { 
+        installModule(store, rootState, path.concat(key), child); // 递归注册子模块
     });
 }
 
-function resetStoreVm(store, state) {
+function resetStoreVM(store, state) {
+    const oldVm = store.vm;
     const computed = {};
     store.getters = {};
     const wrappedGetters = store._wrappedGetters;
@@ -77,6 +91,15 @@ function resetStoreVm(store, state) {
         },
         computed // 利用计算属性实现缓存
     });
+    if (oldVm) {
+        Vue.nextTick(() => oldVm.$destory());
+    }
+}
+
+function getState(store, path) {
+    return path.reduce((newState, current) => {
+        return newState[current];
+    }, store.state);
 }
 
 let Vue;

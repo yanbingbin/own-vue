@@ -9,16 +9,26 @@ export class Store {
         this._wrappedGetters = {};
         this._subscribers = [];
         this._modules = new ModuleCollection(options); // 收集模块转成树形结构
+        this.strict = options.strict; // 严格模式
+        this._committing = false; // 同步的watcher
         const state = this._modules.root.state; // 根的状态
         installModule(this, state, [], this._modules.root); // 安装模块
         resetStoreVM(this, state); // 将状态放到vue实例
         options.plugins.forEach(plugin => plugin(this)); // 执行插件
     }
+    _withCommit(fn) {
+        const committing = this._committing;
+        this._committing = true; // 在函数调用前 表示_committing为true
+        fn();
+        this._committing = committing;
+    }
     subscribe(fn) { // 订阅
         this._subscribers.push(fn);
     }
     replaceState(state) { // 用最新的状态进行替换，例如持久化插件，可用本地local的state使用该方法更新state,处理刷新state丢失
-        this._vm._data.$$state = state;
+        this._withCommit(() => {
+            this._vm._data.$$state = newState;
+        });
     }
     commit = (type, payload) => { 
         this._mutations[type].forEach(fn => fn.call(this, payload));
@@ -44,13 +54,17 @@ function installModule(store, rootState, path, module) {
         const parent = path.slice(0, -1).reduce((module, current) => {
             return module[current];
         }, rootState);
-        Vue.set(parent, path[path.length - 1], module.state);
+        store._withCommit(() => {
+            Vue.set(parent, path[path.length - 1], module.state);
+        });
     }
     module.forEachMutation((mutation, key) => { 
         const namespacedType = namespace + key; // 增加命名空间 /name/mutationName
         store._mutations[namespacedType] = store._mutations[namespacedType] || [];
         store._mutations[namespacedType].push((payload) => { 
-            mutation.call(store, getState(store, path), payload); // 更改状态
+            this._withCommit(() => {
+                mutation.call(store, getState(store, path), payload); // 更改状态
+            });
             store._subscribers.forEach(sub => sub({ mutation, type }, store, state)); // 调用订阅事件
         });
     });
@@ -91,6 +105,11 @@ function resetStoreVM(store, state) {
         },
         computed // 利用计算属性实现缓存
     });
+    if (store.strict) { // 严格模式下只能通过mutation修改状态，否则进行报错提示
+        store._vm.$watch(() => store._vm._data.$$state, () => { // 只要状态一变化会立即执行,在状态变化后同步执行
+            console.assert(store._committing, '在mutation之外更改了状态'); // 如果断言为false，则将一个错误消息写入控制台。如果断言是 true，没有任何反应。
+        }, { deep: true, sync: true });
+    }
     if (oldVm) {
         Vue.nextTick(() => oldVm.$destory());
     }
